@@ -10,17 +10,26 @@ impl OperatorStack {
             highest_priority: -1
         };
     }
+    /// Checks if char is a supported operator that can be placed to the stack
+    fn check_if_operator(token: char) -> bool {
+        match token {
+            '+'|'-'|'*'|'/'|'^'|'√' => return true,
+            _ => false
+        }
+    }
+
     /// Compute priority level of an operator. (BEDMAS precedence)
     fn get_priority(token: Option<&char>) -> i32 {
         match token {
             None => return -1,
             Some('+')|Some('-') => return 1,
             Some('*')|Some('/') => return 2,
-            Some('^') => return 3,
-            // Rest of the cases should be digits
+            Some('^')|Some('√') => return 3,
+            // Rest of the cases should be digits or symbol constants
             _ => return 0
         }
     }
+
     /// Attempt to push char to stack, returns any chars
     /// that were popped off in order to push. i.e char at [0]
     /// would be the first char popped off.
@@ -80,21 +89,28 @@ pub fn postfix_to_RPN(expr: &String) -> Vec<String> {
     let mut operator_stack: OperatorStack = OperatorStack::new();
     let mut numerics_buffer: String = String::from("");
 
+    // go through each char in postfix string
     for token in expr.chars() {
-        if token.is_digit(10) || token == '.'{ // token is digit or decimal then append to numerics buffer
+        // if token is digit or decimal then append to numerics buffer
+        if token.is_digit(10) || token == '.'{ 
             numerics_buffer.push(token);
         }
-        else { // token is operator
+        else { // token now must be operator or symbol constant
             // dump numerics_buffer into a single element onto output
             if !numerics_buffer.is_empty() {
                 output.push(numerics_buffer.clone());
                 numerics_buffer.clear();
             }
-            // push operator onto operator_stack
-            let pop_offs: Option<String> = operator_stack.push(token);
-            if pop_offs.is_some() {
-                // place any operators popped off onto output
-                output.push(pop_offs.unwrap());
+            // check if token is operator
+            if OperatorStack::check_if_operator(token) == true {
+                // push operator onto operator_stack
+                let pop_offs: Option<String> = operator_stack.push(token);
+                if pop_offs.is_some() {
+                    // place any operators popped off onto output
+                    output.push(pop_offs.unwrap());
+                }
+            } else { // token now must be a symbol constant
+                output.push(String::from(token));
             }
         }
     }
@@ -102,7 +118,7 @@ pub fn postfix_to_RPN(expr: &String) -> Vec<String> {
     if !numerics_buffer.is_empty() {
         output.push(numerics_buffer);
     }
-    // append any trailing buffer onto the output
+    // append rest of operators in operator_stack onto the output
     for token in operator_stack.stack.iter().rev() {
         output.push(String::from(token.clone()));
     }
@@ -117,7 +133,7 @@ pub fn evaluate_RPN(expr: &Vec<String>) -> Option<f64> {
         if item.parse::<f64>().is_ok() { // if item is number
             working_stack.push(item.parse::<f64>().unwrap());
         }
-        else { // otherwise must be operators or constant symbol
+        else { // otherwise must be operator or symbol constant
             let token = item.as_str();
             match token { // check constants
                 "π" => working_stack.push(std::f64::consts::PI),
