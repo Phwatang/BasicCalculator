@@ -1,8 +1,11 @@
+/// Code for the evaluation of infix expressions
+/// (by using Reverse Polish Notation).
+
+/// Class for managing a stack of "operator" characters
 struct OperatorStack {
     stack: Vec<char>,
     highest_priority: i32
 }
-
 impl OperatorStack {
     pub fn new() -> Self {
         return Self {
@@ -30,7 +33,7 @@ impl OperatorStack {
         }
     }
 
-    /// Attempt to push char to stack, returns any chars
+    /// Attempt to push a char onto the stack, returns any chars
     /// that were popped off in order to push. i.e char at [0]
     /// would be the first char popped off.
     pub fn push(&mut self, token: char) -> Option<String> {
@@ -72,7 +75,7 @@ impl OperatorStack {
         // put new operator onto buffer, update priority
         self.highest_priority = current_priority;
         self.stack.push(token);
-        // check nothing was added to output_buffer
+        // check if nothing was added to output_buffer
         if output_buffer.is_empty() {
             return None
         }

@@ -1,6 +1,8 @@
-use eframe::{/*run_native, epi::App,*/ egui};
+/// The input buttons of the calculator
 
-// The button titles to be displayed.
+use eframe::egui;
+
+// The button "titles" to be displayed.
 // Layout shown is the intended display layout.
 const BUTTON_TEXTS: [&str; 24] = [
     "C", "←", "π", "e",
@@ -10,17 +12,22 @@ const BUTTON_TEXTS: [&str; 24] = [
     "1", "2", "3", "-",
     "0", ".", "=", "+"
 ];
-// Grid formating info
+// Grid formating consts
 const N_COL: usize = 4;
 const N_ROW: usize = 6;
 const CELL_MIN_SIZE: f32 = 64.0;
 const SPACING: egui::Vec2 = egui::Vec2 {x: 2.0, y: 2.0};
-const TOTAL_HEIGHT: f32 = (N_ROW as f32*CELL_MIN_SIZE) + (N_ROW as f32 - 1.0)*SPACING.y;
+const TOTAL_HEIGHT: f32 = (N_ROW as f32*CELL_MIN_SIZE) + ((N_ROW-1) as f32)*SPACING.y;
+const FONT_SIZE: f32 = 32.0; // Font size for the text on each button
 
-/// Creates a bottom panel within the ui and places a grid of button
-/// onto the panel
-pub fn show_buttons(ui: &mut egui::Ui, button_pressed: &mut String) {
-    // Formatting grid
+/// Creates a bottom panel within the ui and places a grid of buttons
+/// onto the panel.
+/// 
+/// Returns the text of any button clicked.
+/// Returns None if no buttons are clicked.
+pub fn show_buttons(ui: &mut egui::Ui) -> Option<&str> {
+    let mut button_pressed: Option<&str> = None;
+    // Formatting button grid dimensions and spacing
     let button_grid = egui::Grid::new("Stuff")
         .min_row_height(CELL_MIN_SIZE)
         .min_col_width(CELL_MIN_SIZE)
@@ -31,22 +38,23 @@ pub fn show_buttons(ui: &mut egui::Ui, button_pressed: &mut String) {
     .show_inside(ui, |ui| {
         ui.set_min_height(TOTAL_HEIGHT);
         button_grid.show(ui, |ui| {
-            // For each row
+            // Iterate through grid
             for i in 0..N_ROW {
-                // For each column
                 for j in 0..N_COL {
-                    // Current index
+                    // Calculate index
                     let index: usize = (i*N_COL + j) as usize;
                     // Create button
                     ui.centered_and_justified(|ui| {
-                        if ui.button(BUTTON_TEXTS[index]).clicked() {
-                            *button_pressed = String::from(BUTTON_TEXTS[index]);
+                        if ui.button(egui::RichText::new(BUTTON_TEXTS[index]).size(FONT_SIZE)).clicked() {
+                            button_pressed = Some(BUTTON_TEXTS[index]);
                         }
                     });
                 }
                 ui.end_row();
             }
         });
+        // Add padding to very bottom of grid
         ui.add_space(2.0);
     });
+    return button_pressed;
 }
