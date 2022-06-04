@@ -16,7 +16,7 @@ impl OperatorStack {
     /// Checks if char is a supported operator that can be placed to the stack
     fn check_if_operator(token: char) -> bool {
         match token {
-            '+'|'-'|'*'|'/'|'^'|'√' => return true,
+            '+'|'-'|'×'|'÷'|'^'|'√'|'('|')' => return true,
             _ => false
         }
     }
@@ -26,7 +26,7 @@ impl OperatorStack {
         match token {
             None => return -1,
             Some('+')|Some('-') => return 1,
-            Some('*')|Some('/') => return 2,
+            Some('×')|Some('÷') => return 2,
             Some('^')|Some('√') => return 3,
             // Rest of the cases should be digits or symbol constants
             _ => return 0
@@ -34,9 +34,11 @@ impl OperatorStack {
     }
 
     /// Attempt to push a char onto the stack, returns any chars
-    /// that were popped off in order to push. i.e char at [0]
-    /// would be the first char popped off.
-    pub fn push(&mut self, token: char) -> Option<String> {
+    /// that were popped off in order to push. 
+    /// 
+    /// Pop details: element [0] of output string would be the first 
+    /// char popped off whilst pushing
+    fn push(&mut self, token: char) -> Option<String> {
         let mut output_buffer = String::from("");
         let current_priority = Self::get_priority(Some(&token));
 
@@ -99,7 +101,7 @@ pub fn postfix_to_RPN(expr: &String) -> Vec<String> {
             numerics_buffer.push(token);
         }
         else { // token now must be operator or symbol constant
-            // dump numerics_buffer into a single element onto output
+            // dump numerics_buffer into a single element onto RPN expr
             if !numerics_buffer.is_empty() {
                 output.push(numerics_buffer.clone());
                 numerics_buffer.clear();
@@ -109,8 +111,10 @@ pub fn postfix_to_RPN(expr: &String) -> Vec<String> {
                 // push operator onto operator_stack
                 let pop_offs: Option<String> = operator_stack.push(token);
                 if pop_offs.is_some() {
-                    // place any operators popped off onto output
-                    output.push(pop_offs.unwrap());
+                    // place any operators popped off onto RPN expr
+                    for c in pop_offs.unwrap().chars() {
+                        output.push(String::from(c));
+                    }
                 }
             } else { // token now must be a symbol constant
                 output.push(String::from(token));
@@ -160,8 +164,8 @@ pub fn evaluate_RPN(expr: &Vec<String>) -> Option<f64> {
                             match token {
                                 "+" => working_stack.push(left_number+right_number),
                                 "-" => working_stack.push(left_number-right_number),
-                                "/" => working_stack.push(left_number/right_number),
-                                "*" => working_stack.push(left_number*right_number),
+                                "÷" => working_stack.push(left_number/right_number),
+                                "×" => working_stack.push(left_number*right_number),
                                 "^" => working_stack.push(left_number.powf(right_number)),
                                 _ => break
                             }

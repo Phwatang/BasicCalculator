@@ -2,7 +2,7 @@
 // support many strange characters
 use eframe::egui;
 
-const FONT_NAME: &str = "NotoSans";
+const FONT_NAME: &str = "Inter";
 
 /// Prioritise NotoSans font to be the default text on the GUI
 pub fn set_font(ctx: &egui::Context) {
@@ -10,7 +10,7 @@ pub fn set_font(ctx: &egui::Context) {
     // import NotoSans
     font_config.font_data.insert(
         FONT_NAME.to_owned(),
-        egui::FontData::from_static(include_bytes!("NotoSans-Regular.ttf"))
+        egui::FontData::from_static(include_bytes!("Inter-Regular.ttf"))
     );
 
     // prioritize NotoSans
