@@ -68,7 +68,7 @@ impl App for Calculator {
                     None => (),
                     Some("=") => { // Evaluate expression
                         let potential_answer: Option<f64> = expression_evaluate::evaluate_RPN(
-                            &expression_evaluate::postfix_to_RPN(&self.curr_expression)
+                            &expression_evaluate::infix_to_postfix(&self.curr_expression)
                         );
                         let expression: String = self.curr_expression.clone();
                         if potential_answer.is_some() { // For no error, add expression and result into history

@@ -87,9 +87,12 @@ impl OperatorStack {
     }
 }
 
-/// Computes the RPN expression of a string containing an infix expression.
+// Datatype to represent a postfix expression
+type Postfix = Vec<String>;
+
+/// Computes the postfix expression of a string containing an infix expression.
 /// Infix expression assumed to contain no spaces.
-pub fn postfix_to_RPN(expr: &String) -> Vec<String> {
+pub fn infix_to_postfix(expr: &String) -> Postfix {
     let mut output: Vec<String> = Vec::new();
     let mut operator_stack: OperatorStack = OperatorStack::new();
     let mut numerics_buffer: String = String::from("");
@@ -134,7 +137,7 @@ pub fn postfix_to_RPN(expr: &String) -> Vec<String> {
 
 /// Consumes a Vec<String> containing a RPN expression and
 /// evaluates the final answer.
-pub fn evaluate_RPN(expr: &Vec<String>) -> Option<f64> {
+pub fn evaluate_RPN(expr: &Postfix) -> Option<f64> {
     let mut working_stack: Vec<f64> = Vec::new();
     for item in expr.iter() {
         if item.parse::<f64>().is_ok() { // if item is number

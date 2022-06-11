@@ -4,16 +4,16 @@ use eframe::egui;
 
 const FONT_NAME: &str = "Inter";
 
-/// Prioritise NotoSans font to be the default text on the GUI
+/// Prioritise font to be the default text on the GUI
 pub fn set_font(ctx: &egui::Context) {
     let mut font_config = egui::FontDefinitions::default();
-    // import NotoSans
+    // import font
     font_config.font_data.insert(
         FONT_NAME.to_owned(),
         egui::FontData::from_static(include_bytes!("Inter-Regular.ttf"))
     );
 
-    // prioritize NotoSans
+    // prioritize font
     font_config.families.get_mut(&egui::FontFamily::Proportional)
         .unwrap()
         .insert(0, FONT_NAME.to_owned());
