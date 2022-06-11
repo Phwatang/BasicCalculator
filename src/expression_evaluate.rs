@@ -137,7 +137,7 @@ pub fn infix_to_postfix(expr: &String) -> Postfix {
 
 /// Consumes a Vec<String> containing a RPN expression and
 /// evaluates the final answer.
-pub fn evaluate_RPN(expr: &Postfix) -> Option<f64> {
+pub fn evaluate_postfix(expr: &Postfix) -> Option<f64> {
     let mut working_stack: Vec<f64> = Vec::new();
     for item in expr.iter() {
         if item.parse::<f64>().is_ok() { // if item is number

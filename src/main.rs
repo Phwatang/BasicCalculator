@@ -67,7 +67,7 @@ impl App for Calculator {
                 match self.button_area.recent_press.as_deref() {
                     None => (),
                     Some("=") => { // Evaluate expression
-                        let potential_answer: Option<f64> = expression_evaluate::evaluate_RPN(
+                        let potential_answer: Option<f64> = expression_evaluate::evaluate_postfix(
                             &expression_evaluate::infix_to_postfix(&self.curr_expression)
                         );
                         let expression: String = self.curr_expression.clone();
