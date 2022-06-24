@@ -67,10 +67,9 @@ impl App for Calculator {
                 match self.button_area.recent_press.as_deref() {
                     None => (),
                     Some("=") => { // Evaluate expression
-                        let potential_answer: Option<f64> = expression_evaluate::evaluate_postfix(
-                            &expression_evaluate::infix_to_postfix(&self.curr_expression)
-                        );
+                        let potential_answer: Option<f64> = expression_evaluate::evaluate_infix_expr(&self.curr_expression); 
                         let expression: String = self.curr_expression.clone();
+                        
                         if potential_answer.is_some() { // For no error, add expression and result into history
                             self.curr_expression = potential_answer.unwrap().to_string();
                             self.past_entries.push(history_panel::Calculation{expression: expression, answer: self.curr_expression.clone()})

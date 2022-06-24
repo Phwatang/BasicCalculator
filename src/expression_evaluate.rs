@@ -1,9 +1,88 @@
 /// Code for the evaluation of infix expressions
-/// (by using Reverse Polish Notation).
+/// (by using postfix notation aka Reverse Polish Notation).
 
-/// Class for managing a stack of "operator" characters
+// enums for brackets
+#[derive(Clone)]
+enum Bracket {
+    Open,
+    Close
+}
+// enums for single input operators
+#[derive(Clone)]
+enum OneInOperator {
+    SquareRoot,
+    Negative
+}
+impl OneInOperator {
+    fn apply(&self, num: f64) -> f64 {
+        match self {
+            OneInOperator::SquareRoot => return num.sqrt(),
+            OneInOperator::Negative => return -1.0 * num
+        }
+    }
+}
+// enums for two input operators
+#[derive(Clone)]
+enum TwoInOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Power,
+}
+impl TwoInOperator {
+    fn apply(&self, left_num: f64, right_num: f64) -> f64 {
+        match self {
+            TwoInOperator::Add => return left_num + right_num,
+            TwoInOperator::Subtract => return left_num - right_num,
+            TwoInOperator::Multiply => return left_num * right_num,
+            TwoInOperator::Divide => return left_num / right_num,
+            TwoInOperator::Power => return left_num.powf(right_num)
+        }
+    }
+}
+#[derive(Clone)]
+enum Operator {
+    OneInOperator(OneInOperator),
+    TwoInOperator(TwoInOperator),
+    Bracket(Bracket)
+}
+enum Token {
+    Operator(Operator),
+    Number(f64)
+}
+
+/// Converts a char to an associated Operator.
+/// 
+/// Returns None if no associated Operator is found.
+fn char_to_operator(ch: &char) -> Option<Operator> {
+    match ch {
+        '+' => return Some(Operator::TwoInOperator(TwoInOperator::Add)),
+        '×' => return Some(Operator::TwoInOperator(TwoInOperator::Multiply)),
+        '-' => return Some(Operator::TwoInOperator(TwoInOperator::Subtract)),
+        '÷' => return Some(Operator::TwoInOperator(TwoInOperator::Divide)),
+        '^' => return Some(Operator::TwoInOperator(TwoInOperator::Power)),
+        '√' => return Some(Operator::OneInOperator(OneInOperator::SquareRoot)),
+        '(' => return Some(Operator::Bracket(Bracket::Open)),
+        ')' => return Some(Operator::Bracket(Bracket::Close)),
+        _ => return None
+    }
+}
+
+/// Converts a char to an associated constant value.
+/// 
+/// Returns None if no associated value is found.
+fn char_to_value(ch: &char) -> Option<f64> {
+    match ch {
+        'e' => return Some(std::f64::consts::E),
+        'π' => return Some(std::f64::consts::PI),
+        _ => return None
+    }
+}
+
+/// Class for managing a stack of Operators
 struct OperatorStack {
-    stack: Vec<char>,
+    stack: Vec<Operator>,
     highest_priority: i32
 }
 impl OperatorStack {
@@ -13,171 +92,192 @@ impl OperatorStack {
             highest_priority: -1
         };
     }
-    /// Checks if char is a supported operator that can be placed to the stack
-    fn check_if_operator(token: char) -> bool {
-        match token {
-            '+'|'-'|'×'|'÷'|'^'|'√'|'('|')' => return true,
-            _ => false
-        }
-    }
 
-    /// Compute priority level of an operator. (BEDMAS precedence)
-    fn get_priority(token: Option<&char>) -> i32 {
-        match token {
-            None => return -1,
-            Some('+')|Some('-') => return 1,
-            Some('×')|Some('÷') => return 2,
-            Some('^')|Some('√') => return 3,
-            // Rest of the cases should be digits or symbol constants
+    /// Compute priority level of an Operator. (BEDMAS precedence)
+    fn get_priority(op: &Operator) -> i32 {
+        match op {
+            Operator::TwoInOperator(inside) => {
+                match inside {
+                    TwoInOperator::Add|TwoInOperator::Subtract => return 1,
+                    TwoInOperator::Multiply|TwoInOperator::Divide => return 2,
+                    TwoInOperator::Power => return 3,
+                }
+            }
+            Operator::OneInOperator(_) => return 4,
             _ => return 0
         }
     }
-
-    /// Attempt to push a char onto the stack, returns any chars
-    /// that were popped off in order to push. 
+    
+    /// Attempt to push an Operator onto the stack, returns any
+    /// Operators that were popped off in order to push. 
     /// 
-    /// Pop details: element [0] of output string would be the first 
-    /// char popped off whilst pushing
-    fn push(&mut self, token: char) -> Option<String> {
-        let mut output_buffer = String::from("");
-        let current_priority = Self::get_priority(Some(&token));
+    /// Pop details: element [0] of output would be the first 
+    ///              Operator popped off when pushing
+    fn push(&mut self, op: Operator) -> Vec<Operator> {
+        let mut output: Vec<Operator> = Vec::new();
+        let curr_priority = Self::get_priority(&op);
 
-        if token == '(' { // reset precedence upon open bracket
-            self.highest_priority = 0;
-            self.stack.push(token);
-            return None;
-        }
-        else if token == ')' { // pop tokens off from stack upon close bracket
-            let mut buffer_top = self.stack.pop();
-            loop {
-                match buffer_top {
-                    None|Some('(') => break,
-                    Some(_) => output_buffer.push(buffer_top.unwrap())
-                }
-                buffer_top = self.stack.pop();
-            }
-            // recalculate highest priority
-            self.highest_priority = OperatorStack::get_priority(self.stack.last());
-            // check output_buffer incase of situtations like "()".
-            if output_buffer.is_empty() {
-                return None
-            }
-            else {
-                return Some(output_buffer);
-            }
-        }
-
-        // pop any higher/equal precedence operators off the buffer
-        // and put them onto the output
-        while self.highest_priority >= current_priority {
-            let buffer_top = self.stack.pop();
-            output_buffer.push(buffer_top.unwrap());            
-            self.highest_priority = Self::get_priority(self.stack.last());
-        }
-        // put new operator onto buffer, update priority
-        self.highest_priority = current_priority;
-        self.stack.push(token);
-        // check if nothing was added to output_buffer
-        if output_buffer.is_empty() {
-            return None
-        }
-        else {
-            return Some(output_buffer);
-        }
-    }
-}
-
-// Datatype to represent a postfix expression
-type Postfix = Vec<String>;
-
-/// Computes the postfix expression of a string containing an infix expression.
-/// Infix expression assumed to contain no spaces.
-pub fn infix_to_postfix(expr: &String) -> Postfix {
-    let mut output: Vec<String> = Vec::new();
-    let mut operator_stack: OperatorStack = OperatorStack::new();
-    let mut numerics_buffer: String = String::from("");
-
-    // go through each char in postfix string
-    for token in expr.chars() {
-        // if token is digit or decimal then append to numerics buffer
-        if token.is_digit(10) || token == '.'{ 
-            numerics_buffer.push(token);
-        }
-        else { // token now must be operator or symbol constant
-            // dump numerics_buffer into a single element onto RPN expr
-            if !numerics_buffer.is_empty() {
-                output.push(numerics_buffer.clone());
-                numerics_buffer.clear();
-            }
-            // check if token is operator
-            if OperatorStack::check_if_operator(token) == true {
-                // push operator onto operator_stack
-                let pop_offs: Option<String> = operator_stack.push(token);
-                if pop_offs.is_some() {
-                    // place any operators popped off onto RPN expr
-                    for c in pop_offs.unwrap().chars() {
-                        output.push(String::from(c));
+        match &op {
+            // Upon brackets
+            Operator::Bracket(direction) => {
+                match direction {
+                    // For open bracket, reset precedence
+                    Bracket::Open => {
+                        self.highest_priority = 0;
+                        self.stack.push(op);
                     }
-                }
-            } else { // token now must be a symbol constant
-                output.push(String::from(token));
-            }
-        }
-    }
-    // dump rest of numeric buffer onto output
-    if !numerics_buffer.is_empty() {
-        output.push(numerics_buffer);
-    }
-    // append rest of operators in operator_stack onto the output
-    for token in operator_stack.stack.iter().rev() {
-        output.push(String::from(token.clone()));
-    }
-    return output;
-}
-
-/// Consumes a Vec<String> containing a RPN expression and
-/// evaluates the final answer.
-pub fn evaluate_postfix(expr: &Postfix) -> Option<f64> {
-    let mut working_stack: Vec<f64> = Vec::new();
-    for item in expr.iter() {
-        if item.parse::<f64>().is_ok() { // if item is number
-            working_stack.push(item.parse::<f64>().unwrap());
-        }
-        else { // otherwise must be operator or symbol constant
-            let token = item.as_str();
-            match token { // check constants
-                "π" => working_stack.push(std::f64::consts::PI),
-                "e" => working_stack.push(std::f64::consts::E),
-                _ => { // must be 1 or 2 input operators now
-                    // grab top of working_stack
-                    let mut pop_off = working_stack.pop();
-                    if pop_off.is_none() {
-                        return None;
-                    }
-                    let right_number = pop_off.unwrap();
-                    match token { // check 1 input operators
-                        "√" => working_stack.push(right_number.sqrt()),
-                        _ => { // must be 2 input operators now
-                            // grab top of working_stack again
-                            pop_off = working_stack.pop();
-                            if pop_off.is_none() {
-                                return None;
+                    // For close bracket, pop operators off until
+                    // open bracket is met
+                    Bracket::Close => { 
+                        loop {
+                            let stack_top = self.stack.pop();
+                            match stack_top {
+                                None|Some(Operator::Bracket(Bracket::Open)) => break,
+                                Some(_) => output.push(stack_top.unwrap())
                             }
-                            let left_number = pop_off.unwrap();
-                            match token {
-                                "+" => working_stack.push(left_number+right_number),
-                                "-" => working_stack.push(left_number-right_number),
-                                "÷" => working_stack.push(left_number/right_number),
-                                "×" => working_stack.push(left_number*right_number),
-                                "^" => working_stack.push(left_number.powf(right_number)),
-                                _ => break
-                            }
+                        }
+                        // recalculate highest priority
+                        if self.stack.last().is_some() {
+                            self.highest_priority = OperatorStack::get_priority(self.stack.last().unwrap());
+                        } else {
+                            self.highest_priority = -1;
                         }
                     }
                 }
             }
+
+            // Upon two input operators, worry about precedence and pop off lower precedence operators
+            Operator::TwoInOperator(_) => {
+                // pop any higher/equal precedence operators off the stack
+                // and put them onto the output
+                while self.highest_priority >= curr_priority {
+                    let stack_top = self.stack.pop();
+                    output.push(stack_top.unwrap());
+    
+                    if self.stack.last().is_some() {          
+                        self.highest_priority = Self::get_priority(self.stack.last().unwrap());
+                    } else {
+                        self.highest_priority = -1;
+                    }
+                }
+    
+                // put new operator onto stack, update priority
+                self.highest_priority = curr_priority;
+                self.stack.push(op);
+            }
+
+            // Upon single input operators, don't worry about precedence and push straight to stack
+            Operator::OneInOperator(_) => {
+                self.stack.push(op);
+                self.highest_priority = curr_priority;
+            }
+        }
+        return output;
+    }
+}
+
+// Datatype to represent a postfix expression
+type Postfix = Vec<Token>;
+
+/// Converts an infix string expression to Postfix
+/// Infix expression assumed to contain no spaces.
+fn infix_to_postfix(expr: &String) -> Postfix {
+    let mut output: Postfix = Vec::new();
+    let mut operator_stack: OperatorStack = OperatorStack::new();
+    let mut numerics_buffer: String = String::from("");
+    // track if previous token was an operator.
+    // helps to distinguish if "-" means subtract or negative
+    let mut prev_token_is_op = true;
+
+    // go through each char in postfix string
+    for ch in expr.chars() {
+        // if char is digit or decimal then append to numerics buffer
+        if ch.is_digit(10) || ch == '.'{ 
+            numerics_buffer.push(ch);
+            prev_token_is_op = false;
+        }
+        else { // char now must be operator or symbol constant
+            // convert numerics_buffer into f64 and place onto output
+            if !numerics_buffer.is_empty() {
+                output.push(Token::Number(numerics_buffer.parse::<f64>().unwrap()));
+                numerics_buffer.clear();
+            }
+
+            let mut potential_op = char_to_operator(&ch);
+            if potential_op.is_some() { // check if char is a valid operator char
+                
+                // upon a subtract Operator, decide if it should be interpreted
+                // as a negative Operator
+                if prev_token_is_op && matches!(potential_op, Some(Operator::TwoInOperator(TwoInOperator::Subtract))) {
+                    potential_op = Some(Operator::OneInOperator(OneInOperator::Negative));
+                }
+                
+                // place associated Operator enum onto operator stack
+                let pop_offs: Vec<Operator> = operator_stack.push(potential_op.unwrap());
+                if !pop_offs.is_empty() {
+                    // append any Operators popped off onto RPN output
+                    for op in pop_offs {
+                        output.push(Token::Operator(op));
+                    }
+                }
+                prev_token_is_op = true;
+            } else { // char now must be a symbol constant
+                output.push(Token::Number(char_to_value(&ch).unwrap()));
+                prev_token_is_op = false;
+            }
         }
     }
+
+    // convert any remaining numeric buffer and dump onto output
+    if !numerics_buffer.is_empty() {
+        output.push(Token::Number(numerics_buffer.parse::<f64>().unwrap()));
+    }
+    // append remaining operators in operator_stack onto output
+    for op in operator_stack.stack.iter().rev() {
+        output.push(Token::Operator(op.clone()));
+    }
+    return output;
+}
+
+/// Reads a Postfix expression and evaluates the final answer.
+fn evaluate_postfix(expr: &Postfix) -> Option<f64> {
+    let mut working_stack: Vec<f64> = Vec::new();
+    for token in expr.iter() {
+        match token {
+            // upon a number, push it to working_stack
+            Token::Number(num) => {
+                working_stack.push(*num);
+            }
+            // upon an operator, apply it to working_stack
+            Token::Operator(op) => {
+                // grab top of working_stack
+                let mut pop_off = working_stack.pop();
+                if pop_off.is_none() {
+                    return None;
+                }
+                let right_number = pop_off.unwrap();
+        
+                match op { 
+                    // check 1 input operators
+                    Operator::OneInOperator(inside) => working_stack.push(inside.apply(right_number)),
+
+                    // check 2 input operators
+                    Operator::TwoInOperator(inside) => {
+                        // grab top of working_stack again
+                        pop_off = working_stack.pop();
+                        if pop_off.is_none() {
+                            return None;
+                        }
+                        let left_number = pop_off.unwrap();
+                        working_stack.push(inside.apply(left_number, right_number));
+                    },
+                    // this should be impossible to trigger?
+                    _ => return None
+                }
+            }
+        }
+    }
+        
     // multiple numbers could still be left on the stack due
     // to postfix expressions having implied multiplication
     // e.g ab = a*b
@@ -189,3 +289,63 @@ pub fn evaluate_postfix(expr: &Postfix) -> Option<f64> {
     // return answer
     return working_stack.last().copied();
 }
+
+// Evaluates the answer to an infix string expression
+pub fn evaluate_infix_expr(expr: &String) -> Option<f64> {
+    return evaluate_postfix(&infix_to_postfix(expr));
+}
+
+
+#[cfg(test)]
+mod tests {
+    // Note: On windows, the  #![windows_subsystem = "windows"]
+    //       in main.rs will block any print outputs to the terminal,
+    //       including output from tests (not sure about other OSs).
+    //       Comment out  #![..  to read output if needed.
+    use super::*;
+
+    #[test]
+    fn basic_expressions() {
+        let expr_and_ans = [
+            ("363.2+5.6", 368.8),
+            ("486.4-154.2", 332.2),
+            ("1272.5×4", 5090.0),
+            ("32÷10", 3.2),
+            ("√16", 4.0),
+            ("4^3.5", 128.0)
+        ];
+        for item in expr_and_ans {
+            assert_eq!(evaluate_infix_expr(&String::from(item.0)).unwrap(), item.1);
+        }
+    }
+    #[test]
+    fn complex_order_of_operations() {
+        let expr_and_ans = [
+            ("3.6+(23.2-6×3^2÷3+5)×1.5", 18.9)
+        ];
+        for item in expr_and_ans {
+            assert_eq!(evaluate_infix_expr(&String::from(item.0)).unwrap(), item.1);
+        }
+    }
+    #[test]
+    fn negative_numbers() { 
+        let expr_and_ans = [
+            ("36+-4.5", 31.5),
+            ("-12×-2", 24.0),
+            ("48.2--15.8", 64.0),
+            ("-20+6×-(5÷2)", -35.0)
+        ];
+        for item in expr_and_ans {
+            assert_eq!(evaluate_infix_expr(&String::from(item.0)).unwrap(), item.1);
+        }
+    }
+    #[test]
+    fn one_input_operator_chaining() {
+        // a chain of one input operators should be applied in the reverse at which
+        // they appear LTR (i.e the very inside is applied first)
+        assert_eq!(evaluate_infix_expr(&String::from("-√25")).unwrap(), -5.0);
+        // complex number should result in f64::NAN
+        assert!(evaluate_infix_expr(&String::from("√-36")).unwrap().is_nan())
+    }
+}
+
